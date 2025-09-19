@@ -1,0 +1,22 @@
+# Core dependencies
+axios==1.5.0
+clsx==2.0.0
+googleapis==160.0.0
+lucide-react==0.263.1
+multer==2.0.2
+react==18.2.0
+react-dom==18.2.0
+react-hook-form==7.45.4
+react-hot-toast==2.6.0
+react-pdf==7.7.3
+react-query==3.39.3
+react-router-dom==6.15.0
+tailwindcss==3.3.3
+uuid==9.0.1
+
+# Dev dependencies
+@types/react==18.2.20
+@types/react-dom==18.2.7
+autoprefixer==10.4.14
+postcss==8.4.27
+react-scripts==5.0.1
