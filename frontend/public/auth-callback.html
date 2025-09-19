@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Auth Callback</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success {
+            color: #27ae60;
+            margin-top: 1rem;
+        }
+        .error {
+            color: #e74c3c;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>Processing authentication...</h3>
+        <div id="status">Please wait...</div>
+    </div>
+
+    <script>
+        console.log('🔄 Auth callback page loaded');
+        console.log('📍 Current URL:', window.location.href);
+        console.log('🔍 Window opener available:', !!window.opener);
+        
+        const statusDiv = document.getElementById('status');
+        
+        function updateStatus(message, isError = false) {
+            statusDiv.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+
+        try {
+            // Extract parameters from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const accessToken = urlParams.get('access_token');
+            const expiry = urlParams.get('expiry');
+            const error = urlParams.get('error');
+
+            console.log('📋 URL Parameters:', {
+                hasAccessToken: !!accessToken,
+                accessTokenLength: accessToken?.length,
+                expiry: expiry,
+                error: error
+            });
+
+            // Generate a unique key for this auth session
+            const authSessionKey = 'google_auth_result_' + Date.now();
+
+            if (accessToken && expiry) {
+                console.log('✅ Success - storing result in localStorage');
+                updateStatus('Authentication successful! Closing window...');
+                
+                // Store result in localStorage
+                localStorage.setItem('google_auth_status', JSON.stringify({
+                    type: 'GOOGLE_AUTH_SUCCESS',
+                    accessToken: accessToken,
+                    expiry: expiry,
+                    timestamp: Date.now()
+                }));
+                
+                // Try postMessage first (if opener is available)
+                if (window.opener && !window.opener.closed) {
+                    console.log('📤 Sending success message via postMessage');
+                    try {
+                        window.opener.postMessage({
+                            type: 'GOOGLE_AUTH_SUCCESS',
+                            accessToken: accessToken,
+                            expiry: expiry
+                        }, window.location.origin);
+                    } catch (e) {
+                        console.log('❌ PostMessage failed:', e.message);
+                    }
+                }
+                
+            } else {
+                console.log('❌ Error - storing error in localStorage');
+                const errorMessage = error || 'No access token received';
+                updateStatus(`Authentication failed: ${errorMessage}`, true);
+                
+                // Store error in localStorage
+                localStorage.setItem('google_auth_status', JSON.stringify({
+                    type: 'GOOGLE_AUTH_ERROR',
+                    error: errorMessage,
+                    timestamp: Date.now()
+                }));
+                
+                // Try postMessage first (if opener is available)
+                if (window.opener && !window.opener.closed) {
+                    console.log('📤 Sending error message via postMessage');
+                    try {
+                        window.opener.postMessage({
+                            type: 'GOOGLE_AUTH_ERROR',
+                            error: errorMessage
+                        }, window.location.origin);
+                    } catch (e) {
+                        console.log('❌ PostMessage failed:', e.message);
+                    }
+                }
+            }
+
+        } catch (e) {
+            console.error('❌ Error in callback page:', e);
+            const errorMessage = `Callback error: ${e.message}`;
+            updateStatus(errorMessage, true);
+            
+            // Store error in localStorage
+            localStorage.setItem('google_auth_status', JSON.stringify({
+                type: 'GOOGLE_AUTH_ERROR',
+                error: errorMessage,
+                timestamp: Date.now()
+            }));
+            
+            // Try postMessage if available
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.postMessage({
+                        type: 'GOOGLE_AUTH_ERROR',
+                        error: errorMessage
+                    }, window.location.origin);
+                } catch (e) {
+                    console.log('❌ PostMessage failed:', e.message);
+                }
+            }
+        }
+
+        // Close the popup after a short delay
+        setTimeout(() => {
+            console.log('🚪 Closing popup window');
+            window.close();
+        }, 2000);
+    </script>
+</body>
+</html>
